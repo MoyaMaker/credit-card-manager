@@ -61,7 +61,7 @@ const Dropdown = ({
         role="menu"
         aria-hidden={!isOpen}
         aria-labelledby={id}
-        className={`absolute z-10 mt-1 bg-white shadow-lg ${
+        className={`absolute z-10 mt-1 bg-white border rounded-lg shadow-lg ${
           dropdownAlign === "right" ? "right-0" : "left-0"
         } ${isOpen ? "" : "hidden"}`}
       >

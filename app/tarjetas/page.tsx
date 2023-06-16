@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
+
 import { ICreditCard } from "../lib/interfaces/creditCard";
 import Button from "../components/button";
 import CreditCard from "../components/creditCard";
@@ -39,21 +41,21 @@ export default function Tarjetas() {
       </section>
 
       {/* Cards grid */}
-      <div className="my-8 grid md:grid-cols-[repeat(3,18.75rem)] items-center gap-4 max-w-max mx-auto">
+      <section className="my-8 grid md:grid-cols-[repeat(3,18.75rem)] items-center gap-4 max-w-max mx-auto">
         {!isLoadingCards && cards?.length === 0 && (
-          <div className="my-8 text-gray-400 text-center col-span-full">
+          <article className="my-8 text-gray-400 text-center col-span-full">
             No hay tarjetas registradas
-          </div>
+          </article>
         )}
 
         {isLoadingCards && (
           <>
-            <div className="w-[18.75rem] h-[11.8125rem] bg-slate-200 animate-pulse rounded-lg shadow-lg"></div>
-            <div className="w-[18.75rem] h-[11.8125rem] bg-slate-200 animate-pulse rounded-lg shadow-lg"></div>
-            <div className="w-[18.75rem] h-[11.8125rem] bg-slate-200 animate-pulse rounded-lg shadow-lg"></div>
-            <div className="w-[18.75rem] h-[11.8125rem] bg-slate-200 animate-pulse rounded-lg shadow-lg"></div>
-            <div className="w-[18.75rem] h-[11.8125rem] bg-slate-200 animate-pulse rounded-lg shadow-lg"></div>
-            <div className="w-[18.75rem] h-[11.8125rem] bg-slate-200 animate-pulse rounded-lg shadow-lg"></div>
+            <CreditCard isLoading={true} />
+            <CreditCard isLoading={true} />
+            <CreditCard isLoading={true} />
+            <CreditCard isLoading={true} />
+            <CreditCard isLoading={true} />
+            <CreditCard isLoading={true} />
           </>
         )}
 
@@ -61,7 +63,18 @@ export default function Tarjetas() {
           cards &&
           cards.map((card: ICreditCard) => (
             <CreditCard key={card.id}>
-              <span className="font-medium text-lg">{card.cardName}</span>
+              <section className="flex justify-between w-full">
+                <span className="font-medium text-lg">{card.cardName}</span>
+
+                <Button appearance="rounded">
+                  <Image
+                    src="/assets/icons/more_fill.svg"
+                    alt="Opciones"
+                    width={24}
+                    height={24}
+                  />
+                </Button>
+              </section>
               <span className="font-bold text-3xl">
                 {card.availableCredit.toLocaleString("es-MX", {
                   style: "currency",
@@ -72,7 +85,7 @@ export default function Tarjetas() {
               <span className="font-medium text-sm">{`**** **** **** ${card.cardNumber}`}</span>
             </CreditCard>
           ))}
-      </div>
+      </section>
     </>
   );
 }

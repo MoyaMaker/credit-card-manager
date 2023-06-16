@@ -1,12 +1,17 @@
 "use client";
 
-import { FormEvent, Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
 import { Months } from "./lib/const";
 import { ICreditCard } from "./lib/interfaces/creditCard";
-import { ITransaction, transactionTypeMap } from "./lib/interfaces/transaction";
+import {
+  ITransaction,
+  transactionIconMap,
+  transactionTypeMap,
+  transactionTypeMapEnglish,
+} from "./lib/interfaces/transaction";
 import Button from "./components/button";
 import Modal from "./components/modal";
 import Dropdown from "./components/dropdown";
@@ -21,7 +26,7 @@ export default function Home() {
   const today = new Date();
 
   const yearsArray = Array.from(
-    { length: 30 },
+    { length: 9 },
     (_, index) => today.getFullYear() - index
   );
 
@@ -111,10 +116,9 @@ export default function Home() {
 
     const response = await postTransaction(data);
 
-    console.log(response);
-
     if (response.ok) {
-      event.currentTarget.reset();
+      // @ts-ignore
+      event.target.reset();
 
       setFormTransactionModalState(false);
     }
@@ -238,13 +242,33 @@ export default function Home() {
             return (
               <div
                 key={"transaction" + transaction.id}
-                className="grid grid-cols-4 items-center rounded-lg shadow-md px-4 border"
+                className="grid grid-cols-5 items-center rounded-lg shadow-md px-4 border"
               >
-                <span>{`${tDate.getDate()} ${
+                <span>
+                  <Image
+                    src={transactionIconMap[transaction.transactionType]}
+                    alt={transaction.transactionType}
+                    width={24}
+                    height={24}
+                  />
+                </span>
+                <span className="font-medium text-base text-gray-400">{`${tDate.getDate()} ${
                   Months[tDate.getMonth()]
                 } ${tDate.getFullYear()}`}</span>
-                <span>{transaction.concept}</span>
-                <span>
+                <span className="font-medium text-lg">
+                  {transaction.concept}
+                </span>
+                <span
+                  className={`
+                    font-medium text-lg
+                    ${
+                      transaction.transactionType ==
+                      transactionTypeMapEnglish.payment
+                        ? "text-green-700"
+                        : "text-red-500"
+                    }
+                    `}
+                >
                   {transaction.amount.toLocaleString("es-MX", {
                     style: "currency",
                     currency: "MXN",
@@ -328,13 +352,22 @@ export default function Home() {
           <h3 className="font-bold text-xl leading-6">Selecciona un año</h3>
         </div>
 
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {yearsArray.map((year) => (
             <Button
               key={year}
               appearance="flat"
+              size="large"
               onClick={() => {
                 setFullYear(year);
+
+                if (
+                  year === today.getFullYear() &&
+                  monthIndex > today.getMonth()
+                ) {
+                  setMonthIndex(today.getMonth());
+                }
+
                 setFullYearModalState(false);
               }}
             >
@@ -367,6 +400,9 @@ export default function Home() {
               <Button
                 key={month}
                 appearance="flat"
+                disabled={
+                  fullYear == today.getFullYear() && index > today.getMonth()
+                }
                 onClick={() => {
                   setMonthIndex(index);
                   setMonthModalState(false);

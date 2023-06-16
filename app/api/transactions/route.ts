@@ -39,7 +39,8 @@ export async function GET(request: Request) {
       FROM ${TABLE_NAME} 
       WHERE ${transactionDatabaseMap.creditCardId} = '${creditCardId}'
       AND DATE_PART('year', date) = ${year}
-	    AND DATE_PART('month', date) = ${month};
+	    AND DATE_PART('month', date) = ${month}
+      ORDER BY date DESC;
     `;
 
     const result = await client.query(query);
