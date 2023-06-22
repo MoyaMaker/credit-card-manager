@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -21,9 +21,13 @@ import {
   getTransactionsById,
   postTransaction,
 } from "./lib/services/transactions";
+import { getBalanceById } from "./lib/services/balance";
+import { IBalance } from "./lib/interfaces/balance";
 
 export default function Home() {
   const today = new Date();
+
+  const formRef = useRef<HTMLFormElement>(null);
 
   const yearsArray = Array.from(
     { length: 9 },
@@ -41,6 +45,7 @@ export default function Home() {
 
   const [cards, setCards] = useState<ICreditCard[]>();
   const [transactions, setTransactions] = useState<ITransaction[]>();
+  const [balance, setBalance] = useState<IBalance>();
 
   const [cardModalState, setCardModalState] = useState(false);
   const [cardSelected, setCardSelected] = useState<ICreditCard>();
@@ -58,6 +63,8 @@ export default function Home() {
     }
 
     if (cardSelected) {
+      getBalance();
+
       getTransactions();
     }
 
@@ -78,6 +85,18 @@ export default function Home() {
     } catch (error) {
       console.error("Error obteniendo tarjetas", error);
     }
+  };
+
+  const getBalance = async () => {
+    const response = await getBalanceById(
+      cardSelected!.id,
+      fullYear,
+      monthIndex + 1
+    );
+
+    const jsonData = await response.json();
+
+    setBalance(jsonData);
   };
 
   const getTransactions = async () => {
@@ -124,6 +143,12 @@ export default function Home() {
     }
   };
 
+  const onCloseFormTransaction = () => {
+    formRef.current?.reset();
+
+    setFormTransactionModalState(false);
+  };
+
   return (
     <>
       <section className="flex justify-between">
@@ -159,6 +184,11 @@ export default function Home() {
                 000000
               </span>
             </Button>
+            <Button>
+              <span className="text-transparent bg-slate-400 animate-pulse rounded-lg">
+                Actual
+              </span>
+            </Button>
           </>
         )}
 
@@ -179,8 +209,39 @@ export default function Home() {
             <Button onClick={() => setMonthModalState(true)}>
               {Months[monthIndex]}
             </Button>
+
+            <Button
+              disabled={
+                fullYear == today.getFullYear() &&
+                monthIndex == today.getMonth()
+              }
+              onClick={() => {
+                setFullYear(today.getFullYear());
+                setMonthIndex(today.getMonth());
+              }}
+            >
+              Actual
+            </Button>
           </>
         )}
+      </section>
+
+      <section className="my-6 flex gap-4">
+        <span className="font-semibold text-lg">
+          Saldo utilizado:{" "}
+          {balance?.balanceTotal.toLocaleString("es-MX", {
+            style: "currency",
+            currency: "MXN",
+          })}
+        </span>
+
+        <span className="font-semibold text-lg">
+          Crédito disponible:{" "}
+          {balance?.availableCredit.toLocaleString("es-MX", {
+            style: "currency",
+            currency: "MXN",
+          })}
+        </span>
       </section>
 
       {/* Tabla de transacciones */}
@@ -205,7 +266,8 @@ export default function Home() {
         {/* Loading transactions */}
         {isLoadingTransactions && (
           <>
-            <div className="grid grid-cols-4 rounded-lg shadow-md p-4 border">
+            <div className="grid grid-cols-5 rounded-lg shadow-md p-4 border">
+              <span className="w-6 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-24 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-32 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
@@ -213,7 +275,8 @@ export default function Home() {
                 <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               </div>
             </div>
-            <div className="grid grid-cols-4 rounded-lg shadow-md p-4 border">
+            <div className="grid grid-cols-5 rounded-lg shadow-md p-4 border">
+              <span className="w-6 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-24 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-32 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
@@ -221,7 +284,8 @@ export default function Home() {
                 <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               </div>
             </div>
-            <div className="grid grid-cols-4 rounded-lg shadow-md p-4 border">
+            <div className="grid grid-cols-5 rounded-lg shadow-md p-4 border">
+              <span className="w-6 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-24 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-32 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
@@ -417,10 +481,11 @@ export default function Home() {
 
       <Modal
         isOpen={formTransactionModalState}
-        onClose={() => setFormTransactionModalState(false)}
+        onClose={onCloseFormTransaction}
         aria-roledescription="Ventana flotante para registrar una transacción"
       >
         <form
+          ref={formRef}
           className="grid grid-cols-2 gap-4"
           onSubmit={handlePostTransaction}
         >
@@ -503,8 +568,16 @@ export default function Home() {
             />
           </fieldset>
 
-          <div className="col-span-full flex">
-            <Button type="submit" className="flex-1 font-bold !text-2xl">
+          <div className="col-span-full flex justify-end gap-4">
+            <Button
+              type="button"
+              className="font-bold !text-2xl"
+              appearance="flat"
+              onClick={onCloseFormTransaction}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" className="font-bold !text-2xl">
               Guardar
             </Button>
           </div>
