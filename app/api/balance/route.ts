@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import pool from "@/app/lib/db";
+import {
+  CREDIT_CARD_DB_TABLE_NAME,
+  TRANSACTIONS_DB_TABLE_NAME,
+} from "@/app/lib/const";
 
 /**
  * Get cad balance
@@ -12,8 +16,6 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const creditCardId = searchParams.get("creditCardId");
-    const year = searchParams.get("year");
-    const month = searchParams.get("month");
 
     if (!creditCardId) {
       return NextResponse.json(
@@ -26,24 +28,20 @@ export async function GET(request: Request) {
       );
     }
 
-    const query = `SELECT cr.card_name, cr.card_number,
-      ROUND(CAST(SUM(CASE WHEN t.transaction_type = 'purchase' AND DATE_PART('year', t.date) = ${year} AND DATE_PART('month', t.date) = ${month} THEN t.amount WHEN t.transaction_type = 'payment' AND DATE_PART('year', t.date) = ${year} AND DATE_PART('month', t.date) = ${month} THEN (t.amount * -1) ELSE 0 END) AS numeric), 2) AS balance_month,
-      ROUND(CAST(SUM(CASE WHEN t.transaction_type = 'purchase' THEN t.amount WHEN t.transaction_type = 'payment' THEN (t.amount * -1) ELSE 0 END) AS numeric), 2) AS balance_total,
-      cr.credit_limit - SUM(CASE WHEN t.transaction_type = 'purchase' THEN t.amount WHEN t.transaction_type = 'payment' THEN (t.amount * -1) ELSE 0 END) AS available_credit
-      FROM transactions t
-      LEFT JOIN credit_cards cr ON cr.id = t.credit_card_id
-      WHERE t.credit_card_id = '${creditCardId}'
-      GROUP BY cr.id
+    const query = `SELECT cc.credit_limit, SUM(t.amount) AS balance, cc.credit_limit - SUM(t.amount) AS credit_available 
+      FROM ${CREDIT_CARD_DB_TABLE_NAME} cc
+      LEFT JOIN ${TRANSACTIONS_DB_TABLE_NAME} t
+      ON cc.id = t.credit_card_id
+      WHERE cc.id = '${creditCardId}'
+      GROUP by cc.id
     `;
 
     const result = await client.query(query);
 
     const balance = {
-      cardName: result.rows[0]["card_name"],
-      cardNumber: result.rows[0]["card_number"],
-      balanceMonth: Number(result.rows[0]["balance_month"]),
-      balanceTotal: Number(result.rows[0]["balance_total"]),
-      availableCredit: Number(result.rows[0]["available_credit"]),
+      creditLimit: result.rows[0]["credit_limit"],
+      balance: result.rows[0]["balance"],
+      creditAvailable: Number(result.rows[0]["credit_available"]),
     };
 
     return NextResponse.json(balance, {

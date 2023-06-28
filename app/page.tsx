@@ -6,12 +6,7 @@ import Image from "next/image";
 
 import { Months } from "./lib/const";
 import { ICreditCard } from "./lib/interfaces/creditCard";
-import {
-  ITransaction,
-  transactionIconMap,
-  transactionTypeMap,
-  transactionTypeMapEnglish,
-} from "./lib/interfaces/transaction";
+import { ITransaction, transactionTypeMap } from "./lib/interfaces/transaction";
 import Button from "./components/button";
 import Modal from "./components/modal";
 import Dropdown from "./components/dropdown";
@@ -33,6 +28,8 @@ export default function Home() {
     { length: 9 },
     (_, index) => today.getFullYear() - index
   );
+
+  const [cardsHasErrors, setCardsError] = useState(false);
 
   const [monthModalState, setMonthModalState] = useState(false);
   const [monthIndex, setMonthIndex] = useState(today.getMonth());
@@ -63,8 +60,6 @@ export default function Home() {
     }
 
     if (cardSelected) {
-      getBalance();
-
       getTransactions();
     }
 
@@ -102,23 +97,30 @@ export default function Home() {
   const getTransactions = async () => {
     setIsLoadingTransactions(true);
 
-    const response = await getTransactionsById(
-      cardSelected!.id,
-      fullYear,
-      monthIndex + 1
-    );
+    try {
+      const response = await getTransactionsById(
+        cardSelected!.id,
+        fullYear,
+        monthIndex + 1
+      );
 
-    const jsonData = await response.json();
+      const jsonData = await response.json();
 
-    setIsLoadingTransactions(false);
-
-    setTransactions(jsonData);
+      setTransactions(jsonData);
+    } catch (error) {
+      setCardsError(true);
+    } finally {
+      setIsLoadingTransactions(false);
+    }
   };
 
   const handlePostTransaction = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
+
+    // @ts-ignore
+    const amount = event.target.amount.value;
 
     const data: ITransaction = {
       // @ts-ignore
@@ -127,10 +129,9 @@ export default function Home() {
       date: event.target.date.value,
       // @ts-ignore
       concept: event.target.concept.value,
-      // @ts-ignore
-      amount: event.target.amount.value,
-      // @ts-ignore
-      transactionType: event.target.transactionType.value,
+      amount:
+        // @ts-ignore
+        event.target.transactionType.value === "payment" ? amount * -1 : amount,
     };
 
     const response = await postTransaction(data);
@@ -226,7 +227,7 @@ export default function Home() {
         )}
       </section>
 
-      <section className="my-6 flex gap-4">
+      {/* <section className="my-6 flex gap-4">
         <span className="font-semibold text-lg">
           Saldo utilizado:{" "}
           {balance?.balanceTotal.toLocaleString("es-MX", {
@@ -242,7 +243,7 @@ export default function Home() {
             currency: "MXN",
           })}
         </span>
-      </section>
+      </section> */}
 
       {/* Tabla de transacciones */}
       <section className="grid gap-4">
@@ -254,20 +255,28 @@ export default function Home() {
         )}
 
         {/* Not cards registered */}
-        {!isLoadingCards && !cardSelected && cards?.length === 0 && (
-          <div className="my-8 text-gray-400 text-center">
-            <div>Debes registrar un tarjeta para registrar transacciones</div>
-            <Link href="/tarjetas" className="underline my-2 inline-block">
-              Ir a tarjetas
-            </Link>
+        {!cardsHasErrors &&
+          !isLoadingCards &&
+          !cardSelected &&
+          cards?.length === 0 && (
+            <div className="my-8 text-gray-400 text-center">
+              <div>Debes registrar un tarjeta para registrar transacciones</div>
+              <Link href="/tarjetas" className="underline my-2 inline-block">
+                Ir a tarjetas
+              </Link>
+            </div>
+          )}
+
+        {cardsHasErrors && (
+          <div className="my-8 text-gray-500 text-center">
+            Hemos tenido un error obteniendo tus tarjetas
           </div>
         )}
 
         {/* Loading transactions */}
         {isLoadingTransactions && (
           <>
-            <div className="grid grid-cols-5 rounded-lg shadow-md p-4 border">
-              <span className="w-6 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
+            <div className="grid grid-cols-4 rounded-lg shadow-md p-4 border">
               <span className="w-24 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-32 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
@@ -275,8 +284,7 @@ export default function Home() {
                 <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               </div>
             </div>
-            <div className="grid grid-cols-5 rounded-lg shadow-md p-4 border">
-              <span className="w-6 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
+            <div className="grid grid-cols-4 rounded-lg shadow-md p-4 border">
               <span className="w-24 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-32 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
@@ -284,8 +292,7 @@ export default function Home() {
                 <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               </div>
             </div>
-            <div className="grid grid-cols-5 rounded-lg shadow-md p-4 border">
-              <span className="w-6 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
+            <div className="grid grid-cols-4 rounded-lg shadow-md p-4 border">
               <span className="w-24 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-32 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
               <span className="w-16 h-6 bg-slate-400 animate-pulse rounded-lg"></span>
@@ -306,16 +313,8 @@ export default function Home() {
             return (
               <div
                 key={"transaction" + transaction.id}
-                className="grid grid-cols-5 items-center rounded-lg shadow-md px-4 border"
+                className="grid grid-cols-4 items-center rounded-lg shadow-md px-4 border"
               >
-                <span>
-                  <Image
-                    src={transactionIconMap[transaction.transactionType]}
-                    alt={transaction.transactionType}
-                    width={24}
-                    height={24}
-                  />
-                </span>
                 <span className="font-medium text-base text-gray-400">{`${tDate.getDate()} ${
                   Months[tDate.getMonth()]
                 } ${tDate.getFullYear()}`}</span>
@@ -323,17 +322,14 @@ export default function Home() {
                   {transaction.concept}
                 </span>
                 <span
-                  className={`
-                    font-medium text-lg
-                    ${
-                      transaction.transactionType ==
-                      transactionTypeMapEnglish.payment
-                        ? "text-green-700"
-                        : "text-red-500"
-                    }
-                    `}
+                  className={`font-medium text-lg ${
+                    transaction.amount < 0 ? "text-green-600" : "text-red-600"
+                  }`}
                 >
-                  {transaction.amount.toLocaleString("es-MX", {
+                  {(transaction.amount < 0
+                    ? transaction.amount * -1
+                    : transaction.amount
+                  ).toLocaleString("es-MX", {
                     style: "currency",
                     currency: "MXN",
                   })}
@@ -393,7 +389,7 @@ export default function Home() {
                 <CreditCard key={card.id}>
                   <span className="font-medium text-lg">{card.cardName}</span>
                   <span className="font-bold text-3xl">
-                    {card.availableCredit.toLocaleString("es-MX", {
+                    {card.creditLimit.toLocaleString("es-MX", {
                       style: "currency",
                       currency: "MXN",
                     })}

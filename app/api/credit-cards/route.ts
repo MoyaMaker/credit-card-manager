@@ -6,8 +6,10 @@ import {
   creditCardDatabaseMap,
   creditCardSchema,
 } from "../../lib/interfaces/creditCard";
-
-const TABLE_NAME = "credit_cards";
+import {
+  CREDIT_CARD_DB_TABLE_NAME,
+  TRANSACTIONS_DB_TABLE_NAME,
+} from "@/app/lib/const";
 
 /**
  * Get credit cards
@@ -18,16 +20,18 @@ export async function GET() {
 
   try {
     const query = `SELECT
-      ${creditCardDatabaseMap.id},
-      ${creditCardDatabaseMap.cardName},
-      ${creditCardDatabaseMap.cardNumber},
-      ${creditCardDatabaseMap.statementDate},
-      ${creditCardDatabaseMap.paymentDueDate},
-      ${creditCardDatabaseMap.interestRate},
-      ${creditCardDatabaseMap.creditLimit},
-      ${creditCardDatabaseMap.balance},
-      ${creditCardDatabaseMap.availableCredit}
-      FROM ${TABLE_NAME}`;
+      cc.${creditCardDatabaseMap.id},
+      cc.${creditCardDatabaseMap.cardName},
+      cc.${creditCardDatabaseMap.cardNumber},
+      cc.${creditCardDatabaseMap.statementDate},
+      cc.${creditCardDatabaseMap.creditLimit},
+      SUM(CASE WHEN t.amount IS NOT NULL THEN t.amount ELSE 0 END) AS ${creditCardDatabaseMap.balance},
+      cc.credit_limit - SUM(CASE WHEN t.amount IS NOT NULL THEN t.amount ELSE 0 END) AS ${creditCardDatabaseMap.creditAvailable}
+      FROM ${CREDIT_CARD_DB_TABLE_NAME} cc
+      LEFT JOIN ${TRANSACTIONS_DB_TABLE_NAME} t
+      ON cc.id = t.credit_card_id
+      GROUP BY cc.id
+    `;
 
     const result = await client.query(query);
 
@@ -38,11 +42,9 @@ export async function GET() {
         cardName: row[creditCardDatabaseMap.cardName],
         cardNumber: row[creditCardDatabaseMap.cardNumber],
         statementDate: row[creditCardDatabaseMap.statementDate],
-        paymentDueDate: row[creditCardDatabaseMap.paymentDueDate],
-        interestRate: row[creditCardDatabaseMap.interestRate],
         creditLimit: row[creditCardDatabaseMap.creditLimit],
-        balance: row[creditCardDatabaseMap.balance],
-        availableCredit: row[creditCardDatabaseMap.availableCredit],
+        balance: row[creditCardDatabaseMap.balance!],
+        creditAvailable: row[creditCardDatabaseMap.creditAvailable!],
       })
     );
 
@@ -66,11 +68,7 @@ export async function GET() {
  * @param {string} cardName.body.required - Card name for credit card
  * @param {string} cardNumber.body.required - Card number for credit card
  * @param {number} statementDate.body.required - Date for statement card
- * @param {number} paymentDueDate.body.required - Date for payment due date
- * @param {number} interestRate.body.required - Interest rate for credit card
  * @param {number} creditLimit.body.required - Credit limit for credit card
- * @param {number} balance.body.required - Balance of credit card
- * @param {number} availableCredit.body.required - Available credit of credit card
  */
 export async function POST(request: Request) {
   const client = await pool.connect();
@@ -92,24 +90,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const query = `INSERT INTO ${TABLE_NAME} 
+    const query = `INSERT INTO ${CREDIT_CARD_DB_TABLE_NAME} 
       (${creditCardDatabaseMap.cardName},
         ${creditCardDatabaseMap.cardNumber},
         ${creditCardDatabaseMap.statementDate},
-        ${creditCardDatabaseMap.paymentDueDate},
-        ${creditCardDatabaseMap.interestRate},
-        ${creditCardDatabaseMap.creditLimit},
-        ${creditCardDatabaseMap.balance},
-        ${creditCardDatabaseMap.availableCredit}) 
+        ${creditCardDatabaseMap.creditLimit}) 
       VALUES 
         ('${body.cardName}',
         '${body.cardNumber}',
         ${body.statementDate},
-        ${body.paymentDueDate},
-        ${body.interestRate},
-        ${body.creditLimit},
-        ${body.balance},
-        ${body.availableCredit})`;
+        ${body.creditLimit})`;
 
     const result = await client.query(query);
 

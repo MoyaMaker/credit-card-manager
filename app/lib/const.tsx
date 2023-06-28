@@ -10,7 +10,7 @@ export const Months = [
   "Septiembre",
   "Octubre",
   "Noviembre",
-  "Diciembre"
+  "Diciembre",
 ];
 
 export const AbbrMonths = [
@@ -25,5 +25,9 @@ export const AbbrMonths = [
   "Sep",
   "Oct",
   "Nov",
-  "Dic"
+  "Dic",
 ];
+
+export const CREDIT_CARD_DB_TABLE_NAME = "credit_cards";
+
+export const TRANSACTIONS_DB_TABLE_NAME = "transactions";

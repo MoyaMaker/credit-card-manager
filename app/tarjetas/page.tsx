@@ -76,7 +76,7 @@ export default function Tarjetas() {
                 </Button>
               </section>
               <span className="font-bold text-3xl">
-                {card.availableCredit.toLocaleString("es-MX", {
+                {card.creditAvailable!.toLocaleString("es-MX", {
                   style: "currency",
                   currency: "MXN",
                 })}

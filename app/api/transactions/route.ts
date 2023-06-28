@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const query = `SELECT ${transactionDatabaseMap.id}, ${transactionDatabaseMap.creditCardId}, ${transactionDatabaseMap.concept}, ${transactionDatabaseMap.date}, ${transactionDatabaseMap.amount}, ${transactionDatabaseMap.transactionType} 
+    const query = `SELECT ${transactionDatabaseMap.id}, ${transactionDatabaseMap.creditCardId}, ${transactionDatabaseMap.concept}, ${transactionDatabaseMap.date}, ${transactionDatabaseMap.amount}
       FROM ${TABLE_NAME} 
       WHERE ${transactionDatabaseMap.creditCardId} = '${creditCardId}'
       AND DATE_PART('year', date) = ${year}
@@ -53,7 +53,6 @@ export async function GET(request: Request) {
         concept: row[transactionDatabaseMap.concept],
         date: row[transactionDatabaseMap.date],
         amount: row[transactionDatabaseMap.amount],
-        transactionType: row[transactionDatabaseMap.transactionType],
       })
     );
 
@@ -106,9 +105,8 @@ export async function POST(request: Request) {
       ${transactionDatabaseMap.creditCardId},
       ${transactionDatabaseMap.concept},
       ${transactionDatabaseMap.amount},
-      ${transactionDatabaseMap.date},
-      ${transactionDatabaseMap.transactionType}
-    ) VALUES ('${body.creditCardId}', '${body.concept}', ${body.amount}, '${body.date}', '${body.transactionType}')`;
+      ${transactionDatabaseMap.date}
+    ) VALUES ('${body.creditCardId}', '${body.concept}', ${body.amount}, '${body.date}')`;
 
     const result = await client.query(query);
 
